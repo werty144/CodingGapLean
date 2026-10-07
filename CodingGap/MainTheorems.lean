@@ -2,6 +2,7 @@ import CodingGap.Alphabet
 import CodingGap.Hierarchy
 import CodingGap.ToyExample
 import CodingGap.MultiSource
+import CodingGap.MultiSourceCoding
 
 /-!
 # Main theorems
@@ -19,6 +20,7 @@ the LaTeX labels.
 | `thm:coding gap`, lower bound `3/2`           | `coding_gap_lower_bound`              | `ToyExample`    |
 | `thm:coded` (Optimal Coded Broadcast)         | `optimal_coded_broadcast`, `linear_code_exists` | `CodingProtocol`, `Alphabet` |
 | Multi-Source Broadcast Reduction (routing)    | `multi_source_reduction`              | `MultiSource`   |
+| Multi-Source Broadcast Reduction (coding)     | `multi_source_reduction_coding`       | `MultiSourceCoding`, `MaxFlow` |
 | `eq:ff-cut-value` (via `thm:ff`)              | `max_flow_over_time`, `…_short_paths` | `FlowOverTime`  |
 | `lem:short` (Short-path certificate)          | `short_disjoint_paths`                | `Benchmark`     |
 | `2G` is `(r, 2h)`-connected (`sec:paths`)     | `doubling_reduction`                  | `Doubling`      |
@@ -148,6 +150,22 @@ theorem multi_source_reduction {s : V} {k T : ℕ} {σ : RoutingSchedule V k}
 theorem multiSourceRoutingTime_le_two_mul (hG : G.Connected) (s : V) {k : ℕ} (src : Fin k → V) :
     multiSourceRoutingTime G src ≤ 2 * routingTime G s k :=
   CodingGap.multiSourceRoutingTime_le hG s src
+
+/-- **Multi-Source Broadcast Reduction** (coding). Over an alphabet with at least two symbols (e.g.
+`Bits B`, `B ≥ 1`), if a coding scheme broadcasts `k` packets from `s` within `T` rounds, then for
+every placement `src : Fin k → V` of the packets (packet `i` initially held only by `src i`) some
+coding scheme broadcasts them within `2 T` rounds. -/
+theorem multi_source_reduction_coding {A : Type} [Fintype A] (hA : 2 ≤ Fintype.card A) {k : ℕ}
+    (P : Protocol V A k) {s : V} {T : ℕ} (hP : ∀ X, P.Broadcasts G s X T) (src : Fin k → V) :
+    ∃ Q : MultiProtocol V A k, ∀ X, Q.Broadcasts G src X (2 * T) :=
+  exists_multiSource_protocol G hA P hP src
+
+/-- **Multi-Source Broadcast Reduction** (coding), as a bound on coded times for `B`-bit packets:
+`CODE(G, src, k) ≤ 2 CODE(G, s, k)` in a connected graph. -/
+theorem multiSourceCodedTime_le_two_mul (hG : G.Connected) (s : V) {k : ℕ} (src : Fin k → V)
+    {B : ℕ} (hB : 1 ≤ B) :
+    multiSourceCodedTime G src (Bits B) ≤ 2 * codedTime G s (Bits B) k :=
+  multiSourceCodedTime_le G hG s src (two_le_card_bits hB)
 
 /-! ## Main lemmas of the proofs -/
 

@@ -39,6 +39,8 @@ lake build
 | `Alphabet.lean` | `CODE` depends only on the alphabet size; transfer to `B`-bit packets via `GaloisField 2 B`. |
 | `ToyExample.lean` | The instance of Figure `fig:coding-example`: `τ = CODE = 2`, `ROUTE = 3`. |
 | `MultiSource.lean` | Multi-source broadcast reduction for routing (`ROUTE` at most doubles). |
+| `MaxFlow.lean` | Integral max-flow min-cut (augmenting paths) on a finite network. |
+| `MultiSourceCoding.lean` | Multi-source broadcast reduction for coding (`CODE` at most doubles): the cut condition of the gathering network, its decomposition into packet trajectories, and the gather-then-broadcast scheme. |
 
 ## What is proved
 
@@ -49,7 +51,8 @@ lake build
 | `thm:coding gap`, `O(log n)` | `coding_gap_upper_bound` (`τ ≤ CODE ≤ ROUTE ≤ 24 ⌈log₂ n⌉ CODE`) |
 | `thm:coding gap`, `≥ 3/2` | `coding_gap_lower_bound` (Figure `fig:coding-example`, every `B ≥ 1`) |
 | `thm:coded` (Optimal Coded Broadcast) | `optimal_coded_broadcast` (needs `2^B ≥ n`), `coding_attains_tau`, `linear_code_exists` |
-| Multi-Source Broadcast Reduction | `multi_source_reduction`, `multiSourceRoutingTime_le_two_mul` (factor 2) |
+| Multi-Source Broadcast Reduction (routing) | `multi_source_reduction`, `multiSourceRoutingTime_le_two_mul` (factor 2) |
+| Multi-Source Broadcast Reduction (coding) | `multi_source_reduction_coding`, `multiSourceCodedTime_le_two_mul` (factor 2) |
 | `eq:ff-cut-value` (path form) | `max_flow_over_time`, `max_flow_over_time_short_paths` |
 | `lem:short` | `short_disjoint_paths` |
 | `2G` is `(r,2h)`-connected | `doubling_reduction` |
@@ -79,15 +82,19 @@ lake build
 * **Ford–Fulkerson.** `eq:ff-cut-value` is proved directly for `G[T]` in path form
   (`C_T(s,v) = max ∑ᵢ (T + 1 - |Pᵢ|)` over edge-disjoint path families), not derived from the
   cited dynamic-flow theorem.
-* **Multi-source reduction.** Only the routing version (the statement in Section "Our results")
-  is formalized. For routing, the gathering paths are read off the given schedule: trace each
-  packet backwards from its owner, then reverse time. The appendix's flow argument is not needed
-  for this.
+* **Multi-source reduction.** Both versions are formalized. For routing, the gathering paths are
+  read off the given schedule: trace each packet backwards from its owner, then reverse time. For
+  coding, the appendix's flow argument is used, with the time reversal applied to cuts: the
+  gathering network (`G[T]` with storage arcs of capacity `k` and a super-source joined to the
+  initial owners) has all cuts of capacity at least `k`, an integral maximum flow
+  (`MaxFlow.exists_flow`) is split time layer by time layer into packet trajectories, and the
+  packets are forwarded along them before the given coding scheme is run. A multi-source coding
+  scheme (`MultiProtocol`) differs from `Protocol` only in its initial states: each vertex starts
+  from the packets it holds.
 * **Logarithms** are `Nat.clog 2 n = ⌈log₂ n⌉`.
 
 ## Not formalized
 
 * Polynomial-time computability (running times are not modelled).
-* The coding version of the multi-source lemma (Appendix `app:multiple-sources`).
 * The equivalence of temporal and moving cuts (`lem:temporal-moving`); its main ingredient
   `eq:temporal-label-capacity` is proved.

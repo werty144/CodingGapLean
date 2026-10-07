@@ -15,7 +15,9 @@ and `k : ℕ` is the number of packets.
 * The time-expanded network `G[T]`, its finite-capacity temporal cuts, the temporal min-cut
   `C_T(s,v)` (`temporalMinCut`) and the benchmark `τ(G,s,k)` (`tau`).
 * Coding schemes: deterministic protocols over an alphabet `A` (`Protocol`), their execution, and
-  `CODE(G,s,k)` (`codedTime`). The paper's alphabet of `B`-bit strings is `Bits B`.
+  `CODE(G,s,k)` (`codedTime`). The paper's alphabet of `B`-bit strings is `Bits B`. Their
+  multi-source variant (`MultiProtocol`, `multiSourceCodedTime`), where packet `i` starts at
+  `src i`.
 * Routing schemes: content-oblivious routing schedules (`RoutingSchedule`) and `ROUTE(G,s,k)`
   (`routingTime`); their multi-source variant (`multiSourceRoutingTime`), where packet `i` starts
   at an arbitrary vertex `src i`.
@@ -145,6 +147,49 @@ memory is unrestricted, a vertex can keep its output until time `T`, so both def
 noncomputable def codedTime (G : SimpleGraph V) [DecidableRel G.Adj] (s : V) (A : Type)
     (k : ℕ) : ℕ :=
   sInf {T | ∃ P : Protocol V A k, ∀ X, P.Broadcasts G s X T}
+
+/-- A coding scheme for *multi-source* broadcast, where packet `i` is initially held only by
+`src i`. It is a `Protocol` except for the initial states: every vertex starts in a state that
+depends only on the packets it holds, given as `held i = some (X i)` for its own packets and
+`held i = none` for the others. -/
+structure MultiProtocol (V : Type*) (A : Type) (k : ℕ) where
+  /-- The state space of the vertices. -/
+  State : Type
+  /-- Initial state of a vertex, given the packets it holds. -/
+  init : V → (Fin k → Option A) → State
+  /-- `send u w t σ` is the symbol sent by `u` to `w` in round `t` when `u` is in state `σ`. -/
+  send : V → V → ℕ → State → A
+  /-- `step w t σ m` is the new state of `w` at time `t + 1` (`m u = none` for non-neighbours). -/
+  step : V → ℕ → State → (V → Option A) → State
+  /-- The decoded input of a vertex in a given state. -/
+  output : V → State → (Fin k → A)
+
+namespace MultiProtocol
+
+variable {A : Type} {k : ℕ} (P : MultiProtocol V A k) (G : SimpleGraph V) [DecidableRel G.Adj]
+
+/-- The packets initially held by `u` when packet `i` starts at `src i`. -/
+def held (src : Fin k → V) (X : Fin k → A) (u : V) : Fin k → Option A :=
+  fun i => if src i = u then some (X i) else none
+
+/-- The execution of a multi-source protocol on input `X`. -/
+def run (src : Fin k → V) (X : Fin k → A) : ℕ → V → P.State
+  | 0 => fun u => P.init u (held src X u)
+  | t + 1 => fun w =>
+      P.step w t (run src X t w)
+        (fun u => if G.Adj u w then some (P.send u w t (run src X t u)) else none)
+
+/-- Broadcast is complete at time `T`: every vertex outputs the input. -/
+def Broadcasts (src : Fin k → V) (X : Fin k → A) (T : ℕ) : Prop :=
+  ∀ v, P.output v (P.run G src X T v) = X
+
+end MultiProtocol
+
+/-- The minimum completion time of a correct coding scheme over the alphabet `A` for the
+multi-source broadcast instance in which packet `i` is initially held by `src i`. -/
+noncomputable def multiSourceCodedTime (G : SimpleGraph V) [DecidableRel G.Adj] {k : ℕ}
+    (src : Fin k → V) (A : Type) : ℕ :=
+  sInf {T | ∃ P : MultiProtocol V A k, ∀ X, P.Broadcasts G src X T}
 
 end Protocols
 

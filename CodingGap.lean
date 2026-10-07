@@ -18,4 +18,6 @@ import CodingGap.ToyExample
 import CodingGap.Halving
 import CodingGap.Hierarchy
 import CodingGap.MultiSource
+import CodingGap.MaxFlow
+import CodingGap.MultiSourceCoding
 import CodingGap.MainTheorems
